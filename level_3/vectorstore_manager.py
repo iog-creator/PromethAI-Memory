@@ -146,7 +146,9 @@ class Memory:
         self.namespace = namespace
         self.memory_instances = []
         #inspect and fix this
-        self.memory_class = DynamicBaseMemory('Memory', user_id, str(self.memory_id), index_name, db_type, namespace)
+        self.memory_class = DynamicBaseMemory(
+            'Memory', user_id, self.memory_id, index_name, db_type, namespace
+        )
     def load_environment_variables(self) -> None:
         load_dotenv()
         self.OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", 0.0))
@@ -278,8 +280,7 @@ class Memory:
 
     async def dynamic_method_call(self, dynamic_base_memory_instance, method_name: str, *args, **kwargs):
         if method_name in dynamic_base_memory_instance.methods:
-            method = getattr(dynamic_base_memory_instance, method_name, None)
-            if method:
+            if method := getattr(dynamic_base_memory_instance, method_name, None):
                 return await method(*args, **kwargs)
         raise AttributeError(f"{dynamic_base_memory_instance.name} object has no attribute {method_name}")
 

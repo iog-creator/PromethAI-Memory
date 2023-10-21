@@ -4,19 +4,20 @@ from level_2.shared.chunk_strategy import ChunkStrategy
 import re
 def chunk_data(chunk_strategy=None, source_data=None, chunk_size=None, chunk_overlap=None):
 
-    if chunk_strategy == ChunkStrategy.VANILLA:
-        chunked_data = vanilla_chunker(source_data, chunk_size, chunk_overlap)
+    if chunk_strategy == ChunkStrategy.VANILLA or chunk_strategy not in [
+        ChunkStrategy.PARAGRAPH,
+        ChunkStrategy.SENTENCE,
+        ChunkStrategy.EXACT,
+    ]:
+        return vanilla_chunker(source_data, chunk_size, chunk_overlap)
 
     elif chunk_strategy == ChunkStrategy.PARAGRAPH:
-        chunked_data = chunk_data_by_paragraph(source_data,chunk_size, chunk_overlap)
+        return chunk_data_by_paragraph(source_data,chunk_size, chunk_overlap)
 
     elif chunk_strategy == ChunkStrategy.SENTENCE:
-        chunked_data = chunk_by_sentence(source_data, chunk_size, chunk_overlap)
-    elif chunk_strategy == ChunkStrategy.EXACT:
-        chunked_data = chunk_data_exact(source_data, chunk_size, chunk_overlap)
+        return chunk_by_sentence(source_data, chunk_size, chunk_overlap)
     else:
-        chunked_data = vanilla_chunker(source_data, chunk_size, chunk_overlap)
-    return chunked_data
+        return chunk_data_exact(source_data, chunk_size, chunk_overlap)
 
 
 def vanilla_chunker(source_data, chunk_size, chunk_overlap):
@@ -29,15 +30,13 @@ def vanilla_chunker(source_data, chunk_size, chunk_overlap):
         chunk_overlap=20,
         length_function=len
     )
-    pages = text_splitter.create_documents([source_data])
-    # pages = source_data.load_and_split()
-    return pages
+    return text_splitter.create_documents([source_data])
 def chunk_data_exact(data_chunks, chunk_size, chunk_overlap):
     data = "".join(data_chunks)
-    chunks = []
-    for i in range(0, len(data), chunk_size - chunk_overlap):
-        chunks.append(data[i:i + chunk_size])
-    return chunks
+    return [
+        data[i : i + chunk_size]
+        for i in range(0, len(data), chunk_size - chunk_overlap)
+    ]
 
 
 def chunk_by_sentence(data_chunks, chunk_size, overlap):

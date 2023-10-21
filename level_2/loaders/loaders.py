@@ -15,20 +15,14 @@ def _document_loader( observation: str, loader_settings: dict):
             pdf_response = requests.get(loader_settings["path"])
             pdf_stream = BytesIO(pdf_response.content)
             with fitz.open(stream=pdf_stream, filetype='pdf') as doc:
-                file_content = ""
-                for page in doc:
-                    file_content += page.get_text()
-            pages = chunk_data(chunk_strategy= 'VANILLA', source_data=file_content)
-
-            return pages
+                file_content = "".join(page.get_text() for page in doc)
+            return chunk_data(chunk_strategy= 'VANILLA', source_data=file_content)
         elif loader_settings.get("source") == "file":
             # Process the PDF using PyPDFLoader
             # might need adapting for different loaders + OCR
             # need to test the path
             loader = PyPDFLoader(loader_settings["path"])
-            pages = loader.load_and_split()
-            return pages
-
+            return loader.load_and_split()
     elif document_format == "text":
         # Process the text directly
         return observation

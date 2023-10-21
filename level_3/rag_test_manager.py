@@ -177,9 +177,10 @@ def generate_param_variants(base_params=None, increments=None, ranges=None, incl
     # Generate all combinations of parameter variants
     keys = param_ranges.keys()
     values = param_ranges.values()
-    param_variants = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
-
-    return param_variants
+    return [
+        dict(zip(keys, combination))
+        for combination in itertools.product(*values)
+    ]
 
 
 # Generate parameter variants and display a sample of the generated combinations
@@ -194,9 +195,7 @@ async def generate_chatgpt_output(query:str, context:str=None):
             {"role": "user", "content": query}
         ]
     )
-    llm_output = response.choices[0].message.content
-    # print(llm_output)
-    return llm_output
+    return response.choices[0].message.content
 
 async def eval_test(query=None, output=None, expected_output=None, context=None, synthetic_test_set=False):
 
@@ -214,9 +213,7 @@ async def eval_test(query=None, output=None, expected_output=None, context=None,
         )
     metric = OverallScoreMetric()
 
-    # If you want to run the test
-    test_result = run_test(test_case, metrics=[metric], raise_error=False)
-    return test_result
+    return run_test(test_case, metrics=[metric], raise_error=False)
     # You can also inspect the test result class
     # print(test_result)
 
@@ -290,7 +287,7 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
             test_params = generate_param_variants(
                 included_params=['chunk_size'])
 
-        print("Here are the test params", str(test_params))
+        print("Here are the test params", test_params)
 
         loader_settings = {
             "format": f"{data_format}",
@@ -302,12 +299,12 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
         async def run_test(test, loader_settings, metadata, test_id=None,only_llm_context=False):
 
             if test_id is None:
-                test_id = str(generate_letter_uuid()) + "_" +"SEMANTICMEMORY"
+                test_id = f"{str(generate_letter_uuid())}_SEMANTICMEMORY"
             memory = await Memory.create_memory(user_id, session, namespace="SEMANTICMEMORY")
             await memory.add_memory_instance("ExampleMemory")
             existing_user = await Memory.check_existing_user(user_id, session)
             await memory.manage_memory_attributes(existing_user)
-            test_class = test_id + "_class"
+            test_class = f"{test_id}_class"
             await memory.add_dynamic_memory_class(test_id.lower(), test_id)
             dynamic_memory_class = getattr(memory, test_class.lower(), None)
             methods_to_add = ['add_memories', 'fetch_memories', 'delete_memories']
@@ -323,7 +320,7 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
             print("Available memory classes:", await memory.list_memory_classes())
             if test:
                 loader_settings.update(test)
-            test_class = test_id + "_class"
+            test_class = f"{test_id}_class"
             dynamic_memory_class = getattr(memory, test_class.lower(), None)
             async def run_load_test_element( loader_settings=loader_settings, metadata=metadata, test_id=test_id, test_set=test_set):
 
@@ -332,19 +329,24 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
                                                                observation='Observation loaded', params=metadata,
                                                                loader_settings=loader_settings)
                 return "Loaded test element"
+
             async def run_search_element(test_item, test_id):
                 retrieve_action = await memory.dynamic_method_call(dynamic_memory_class, 'fetch_memories',
                                                                    observation=str(test_item["question"]))
-                print("Here is the test result", str(retrieve_action["data"]['Get'][test_id][0]["text"]))
+                print(
+                    "Here is the test result",
+                    retrieve_action["data"]['Get'][test_id][0]["text"],
+                )
                 return retrieve_action["data"]['Get'][test_id][0]["text"]
 
             async def run_eval(test_item, search_result):
                 test_eval= await eval_test(query=test_item["question"], expected_output=test_item["answer"],
                                               context=str(search_result))
                 return test_eval
+
             async def run_generate_test_set( test_id):
 
-                test_class = test_id + "_class"
+                test_class = f"{test_id}_class"
                 # await memory.add_dynamic_memory_class(test_id.lower(), test_id)
                 dynamic_memory_class = getattr(memory, test_class.lower(), None)
                 print(dynamic_memory_class)
@@ -352,6 +354,7 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
                                                                    observation="Generate a short summary of this document",
                                                                    search_type="generative")
                 return dynamic_test_manager(retrieve_action)
+
             test_eval_pipeline =[]
 
 
@@ -362,8 +365,6 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
                     test_eval_pipeline.append(test_result)
             if generate_test_set is True:
                 synthetic_test_set = run_generate_test_set(test_id)
-            else:
-                pass
             if test_set:
                 logging.info("Loading and evaluating test set")
                 await run_load_test_element(loader_settings, metadata, test_id, test_set)
@@ -371,9 +372,6 @@ async def start_test(data, test_set=None, user_id=None, params=None, job_id=None
                     result = await run_search_element(test_qa, test_id)
                     test_result = await run_eval(test_qa, result)
                     test_eval_pipeline.append( test_result)
-
-            else:
-                pass
 
             await memory.dynamic_method_call(dynamic_memory_class, 'delete_memories',
                                                            namespace=test_id)

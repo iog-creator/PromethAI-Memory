@@ -156,11 +156,10 @@ class EpisodicBuffer(BaseMemory):
         document_context_result = self.llm_base(_input.to_string())
         document_context_result_parsed = parser.parse(document_context_result)
         document_context_result_parsed = json.loads(document_context_result_parsed.json())
-        document_summary = document_context_result_parsed["summaries"][0]["summary"]
-
-        return document_summary
+        return document_context_result_parsed["summaries"][0]["summary"]
 
     async def memory_route(self, text_time_diff: str):
+
         @ai_classifier
         class MemoryRoute(Enum):
             """Represents classifer for freshness of memories"""
@@ -172,9 +171,7 @@ class EpisodicBuffer(BaseMemory):
             data_uploaded_more_than_three_months_ago = "0.3"
             data_uploaded_more_than_six_months_ago = "0.1"
 
-        namespace = MemoryRoute(str(text_time_diff))
-
-        return namespace
+        return MemoryRoute(text_time_diff)
 
     async def freshness(self, observation: str, namespace: str = None, memory=None) -> list[str]:
         """Freshness - Score between 0 and 1  on how often was the information updated in episodic or semantic memory in the past"""
@@ -238,7 +235,9 @@ class EpisodicBuffer(BaseMemory):
         # Calculate intervals between consecutive accesses
         intervals = [access_times[i + 1] - access_times[i] for i in range(len(access_times) - 1)]
         # A simple scoring mechanism: Longer intervals get higher scores, as they indicate spaced repetition
-        repetition_score = sum([1.0 / (interval + 1) for interval in intervals]) / len(intervals)
+        repetition_score = sum(
+            1.0 / (interval + 1) for interval in intervals
+        ) / len(intervals)
         summary = await self._summarizer(text = observation, document=result_output["data"]["Get"]["EPISODICMEMORY"][0])
         logging.info("Repetition is %s", str(repetition_score))
         logging.info("Repetition summary is %s", str(summary))
@@ -385,8 +384,6 @@ class EpisodicBuffer(BaseMemory):
         chain_filter = prompt_filter | self.llm
         output = await chain_filter.ainvoke({"query": user_input})
 
-        # this part is partially done but the idea is to apply different attention modulators
-        # to the data to fetch the most relevant information from the vector stores
         class BufferModulators(BaseModel):
             """Value of buffer modulators"""
             frequency: str = Field(..., description="Frequency score of the document")
@@ -455,7 +452,7 @@ class EpisodicBuffer(BaseMemory):
                 _input = prompt.format_prompt(query=adjusted_modulator)
                 document_context_result = self.llm_base(_input.to_string())
                 document_context_result_parsed = parser.parse(document_context_result)
-                print("Updating with the following weights", str(document_context_result_parsed))
+                print("Updating with the following weights", document_context_result_parsed)
                 await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
             else:
                 # adjust the weights of the modulators by adding a negative value
@@ -472,21 +469,21 @@ class EpisodicBuffer(BaseMemory):
                 _input = prompt.format_prompt(query=adjusted_modulator)
                 document_context_result = self.llm_base(_input.to_string())
                 document_context_result_parsed = parser.parse(document_context_result)
-                print("Updating with the following weights", str(document_context_result_parsed))
+                print("Updating with the following weights", document_context_result_parsed)
                 await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
-            # except:
-            #     # initialize the modulators with default values if they are not provided
-            #     print("Starting with default modulators")
-            #     attention_modulators = {
-            #         "freshness": 0.5,
-            #         "frequency": 0.5,
-            #         "relevance": 0.5,
-            #         "saliency": 0.5,
-            #     }
-            #     _input = prompt.format_prompt(query=attention_modulators)
-            #     document_context_result = self.llm_base(_input.to_string())
-            #     document_context_result_parsed = parser.parse(document_context_result)
-            #     await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
+                # except:
+                #     # initialize the modulators with default values if they are not provided
+                #     print("Starting with default modulators")
+                #     attention_modulators = {
+                #         "freshness": 0.5,
+                #         "frequency": 0.5,
+                #         "relevance": 0.5,
+                #         "saliency": 0.5,
+                #     }
+                #     _input = prompt.format_prompt(query=attention_modulators)
+                #     document_context_result = self.llm_base(_input.to_string())
+                #     document_context_result_parsed = parser.parse(document_context_result)
+                #     await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
 
         elif attention_modulators:
             pass
@@ -535,7 +532,7 @@ class EpisodicBuffer(BaseMemory):
         # Sort the memories based on their average scores
         sorted_memories = sorted(memory_scores, key=lambda x: x["average_score"], reverse=True)[:5]
         # Store the sorted memories in the context
-        context.extend([item for item in sorted_memories])
+        context.extend(list(sorted_memories))
 
         for item in context:
             memory = item.get('memory', {})
@@ -635,6 +632,7 @@ class EpisodicBuffer(BaseMemory):
             user_query: str = Field(..., description="The original user query")
 
         # we structure the data here to make it easier to work with
+        # we structure the data here to make it easier to work with
         parser = PydanticOutputParser(pydantic_object=BufferRawContextList)
         prompt = PromptTemplate(
             template="""Summarize and create semantic search queries and relevant 
@@ -701,9 +699,7 @@ class EpisodicBuffer(BaseMemory):
         my_object = parse_obj_as(TaskList, output)
         print("HERE IS THE OUTPUT", my_object.json())
         data = json.loads(my_object.json())
-        # Extract the list of tasks
-        tasks_list = data["tasks"]
-        return tasks_list
+        return data["tasks"]
 
     async def main_buffer(
         self, user_input=None, params=None, attention_modulators=None
@@ -729,18 +725,15 @@ class EpisodicBuffer(BaseMemory):
 
             complete_agent_prompt= f" Document context is: {document_from_vectorstore} \n  Task is : {task['task_order']} {task['task_name']} {task['operation']} "
 
-            # task['vector_store_context_results']=document_context_result_parsed.dict()
-
             class FetchText(BaseModel):
                 observation: str = Field(description="observation we want to translate")
             @tool("fetch_from_vector_store", args_schema=FetchText, return_direct=True)
             def fetch_from_vector_store(observation, args_schema=FetchText):
                 """Fetch from vectorstore if data doesn't exist in the context"""
-                if  document_context_result_parsed:
+                if document_context_result_parsed:
                     return document_context_result_parsed
-                else:
-                    out = self.fetch_memories(observation['original_query'], namespace="SEMANTICMEMORY")
-                    return out
+                out = self.fetch_memories(observation['original_query'], namespace="SEMANTICMEMORY")
+                return out
 
             class TranslateText(BaseModel):
                 observation: str = Field(description="observation we want to translate")
@@ -765,7 +758,6 @@ class EpisodicBuffer(BaseMemory):
             result_tasks.append(task)
             result_tasks.append(output)
 
-        # buffer_result = await self.fetch_memories(observation=str(user_input))
         class EpisodicTask(BaseModel):
             """Schema for an individual task."""
 
@@ -807,8 +799,8 @@ class EpisodicBuffer(BaseMemory):
             query=user_input, steps=str(tasks_list)
             , buffer=str(result_tasks), date= date, attention_modulators=attention_modulators
         )
-        print("HERE ARE THE STEPS, BUFFER AND DATE", str(tasks_list))
-        print("here are the result_tasks", str(result_tasks))
+        print("HERE ARE THE STEPS, BUFFER AND DATE", tasks_list)
+        print("here are the result_tasks", result_tasks)
         # return "a few things to do like load episodic memory in a structured format"
         output = self.llm_base(_input.to_string())
         result_parsing = parser.parse(output)

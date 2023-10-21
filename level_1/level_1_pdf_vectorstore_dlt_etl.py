@@ -76,7 +76,7 @@ def _init_weaviate():
             "X-OpenAI-Api-Key": os.environ.get('OPENAI_API_KEY')
         }
     )
-    retriever = WeaviateHybridSearchRetriever(
+    return WeaviateHybridSearchRetriever(
         client=client,
         index_name="PDFloader",
         text_key="text",
@@ -84,8 +84,6 @@ def _init_weaviate():
         embedding=embeddings,
         create_schema_if_missing=True,
     )
-
-    return retriever
 def load_to_weaviate(document_path=None):
     """Load documents to weaviate"""
     retriever =_init_weaviate()
@@ -177,24 +175,21 @@ def infer_schema_from_text(text: str):
 
     prompt_ = """ You are a json schema master. Create a JSON schema based on the following data and don't write anything else: {prompt} """
 
-    complete_query = PromptTemplate(
-    input_variables=["prompt"],
-    template=prompt_,
-)
+        complete_query = PromptTemplate(
+        input_variables=["prompt"],
+        template=prompt_,
+    )
 
     chain = LLMChain(
         llm=llm, prompt=complete_query, verbose=True
     )
     chain_result = chain.run(prompt=text).strip()
 
-    json_data = json.dumps(chain_result)
-    return json_data
+    return json.dumps(chain_result)
 
 
 def set_data_contract(data, version, date, agreement_id=None, privacy_policy=None, terms_of_service=None, format=None, schema_version=None, checksum=None, owner=None, license=None, validity_start=None, validity_end=None):
-    # Creating the generic data contract
-
-    data_contract = {
+    return {
         "version": version or "",
         "date": date or "",
         "agreement_id": agreement_id or "",
@@ -207,12 +202,8 @@ def set_data_contract(data, version, date, agreement_id=None, privacy_policy=Non
         "license": license or "",
         "validity_start": validity_start or "",
         "validity_end": validity_end or "",
-        "properties": data  # Adding the given data under the "properties" field
+        "properties": data,  # Adding the given data under the "properties" field
     }
-
-
-
-    return data_contract
 
 def create_id_dict(memory_id=None, st_memory_id=None, buffer_id=None):
     """
@@ -226,12 +217,11 @@ def create_id_dict(memory_id=None, st_memory_id=None, buffer_id=None):
     Returns:
         dict: A dictionary containing the IDs.
     """
-    id_dict = {
+    return {
         "memoryID": memory_id or "",
         "st_MemoryID": st_memory_id or "",
-        "bufferID": buffer_id or ""
+        "bufferID": buffer_id or "",
     }
-    return id_dict
 
 
 
@@ -262,17 +252,15 @@ def infer_properties_from_text(text: str):
 
     prompt_ = """ You are a json index master. Create a short JSON index containing the most important data and don't write anything else: {prompt} """
 
-    complete_query = PromptTemplate(
-    input_variables=["prompt"],
-    template=prompt_,
-)
+        complete_query = PromptTemplate(
+        input_variables=["prompt"],
+        template=prompt_,
+    )
 
     chain = LLMChain(
         llm=llm, prompt=complete_query, verbose=True
     )
-    chain_result = chain.run(prompt=text).strip()
-    # json_data = json.dumps(chain_result)
-    return chain_result
+    return chain.run(prompt=text).strip()
 #
 #
 # # print(infer_schema_from_text(output[0].page_content))
@@ -309,8 +297,7 @@ def ai_function(prompt=None, json_schema=None):
     ]
     prompt_ = ChatPromptTemplate(messages=prompt_msgs)
     chain = create_structured_output_chain(json_schema , prompt=prompt_, llm=llm, verbose=True)
-    output = chain.run(input = prompt, llm=llm)
-    yield output
+    yield chain.run(input = prompt, llm=llm)
 
 
 # Define a base directory if you have one; this could be the directory where your script is located
@@ -325,16 +312,14 @@ def higher_level_thinking():
     str_docs_data = str(docs_data)
 
     llm_math = LLMMathChain.from_llm(llm, verbose=True)
-    output = llm_math.run(f"Calculate the sum of the price of the tickets from these documents: {str_docs_data}")
-
-    # data_format = init_buffer(data=output, version="0.0.1", date="2021-09-01")
-    yield output
+    yield llm_math.run(
+        f"Calculate the sum of the price of the tickets from these documents: {str_docs_data}"
+    )
 result_higher_level_thinking = higher_level_thinking()
 def process_higher_level_thinking(result=None):
     data_format = init_buffer(data=result, version="0.0.1", date="2021-09-01")
     import json
-    data_format=json.dumps(data_format)
-    yield data_format
+    yield json.dumps(data_format)
 
 document_paths = [
     os.path.join(BASE_DIR, "personal_receipts", "2017", "de", "public_transport", "3ZCCCW.pdf"),

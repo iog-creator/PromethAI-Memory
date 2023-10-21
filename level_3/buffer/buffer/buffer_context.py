@@ -49,8 +49,6 @@ async def buffer_context(
     chain_filter = prompt_filter | self.llm
     output = await chain_filter.ainvoke({"query": user_input})
 
-    # this part is partially done but the idea is to apply different attention modulators
-    # to the data to fetch the most relevant information from the vector stores
     class BufferModulators(BaseModel):
         """Value of buffer modulators"""
         frequency: str = Field(..., description="Frequency score of the document")
@@ -120,7 +118,7 @@ async def buffer_context(
             _input = prompt.format_prompt(query=adjusted_modulator)
             document_context_result = self.llm_base(_input.to_string())
             document_context_result_parsed = parser.parse(document_context_result)
-            print("Updating with the following weights", str(document_context_result_parsed))
+            print("Updating with the following weights", document_context_result_parsed)
             await self.add_memories(observation=str(document_context_result_parsed), params=params,
                                     namespace="BUFFERMEMORY")
         else:
@@ -139,22 +137,22 @@ async def buffer_context(
             _input = prompt.format_prompt(query=adjusted_modulator)
             document_context_result = self.llm_base(_input.to_string())
             document_context_result_parsed = parser.parse(document_context_result)
-            print("Updating with the following weights", str(document_context_result_parsed))
+            print("Updating with the following weights", document_context_result_parsed)
             await self.add_memories(observation=str(document_context_result_parsed), params=params,
                                     namespace="BUFFERMEMORY")
-        # except:
-        #     # initialize the modulators with default values if they are not provided
-        #     print("Starting with default modulators")
-        #     attention_modulators = {
-        #         "freshness": 0.5,
-        #         "frequency": 0.5,
-        #         "relevance": 0.5,
-        #         "saliency": 0.5,
-        #     }
-        #     _input = prompt.format_prompt(query=attention_modulators)
-        #     document_context_result = self.llm_base(_input.to_string())
-        #     document_context_result_parsed = parser.parse(document_context_result)
-        #     await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
+            # except:
+            #     # initialize the modulators with default values if they are not provided
+            #     print("Starting with default modulators")
+            #     attention_modulators = {
+            #         "freshness": 0.5,
+            #         "frequency": 0.5,
+            #         "relevance": 0.5,
+            #         "saliency": 0.5,
+            #     }
+            #     _input = prompt.format_prompt(query=attention_modulators)
+            #     document_context_result = self.llm_base(_input.to_string())
+            #     document_context_result_parsed = parser.parse(document_context_result)
+            #     await self.add_memories(observation=str(document_context_result_parsed), params=params, namespace="BUFFERMEMORY")
 
     elif attention_modulators:
         pass
@@ -202,7 +200,7 @@ async def buffer_context(
     # Sort the memories based on their average scores
     sorted_memories = sorted(memory_scores, key=lambda x: x["average_score"], reverse=True)[:5]
     # Store the sorted memories in the context
-    context.extend([item for item in sorted_memories])
+    context.extend(list(sorted_memories))
 
     for item in context:
         memory = item.get('memory', {})
@@ -304,6 +302,7 @@ async def buffer_context(
         user_query: str = Field(..., description="The original user query")
 
     # we structure the data here to make it easier to work with
+    # we structure the data here to make it easier to work with
     parser = PydanticOutputParser(pydantic_object=BufferRawContextList)
     prompt = PromptTemplate(
         template="""Summarize and create semantic search queries and relevant 
@@ -371,6 +370,4 @@ async def get_task_list(
     my_object = parse_obj_as(TaskList, output)
     print("HERE IS THE OUTPUT", my_object.json())
     data = json.loads(my_object.json())
-    # Extract the list of tasks
-    tasks_list = data["tasks"]
-    return tasks_list
+    return data["tasks"]

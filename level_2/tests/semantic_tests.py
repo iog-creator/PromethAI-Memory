@@ -23,45 +23,43 @@ async def main():
 
         if memory_loaded:
             return memory_loaded["data"]["Get"]["SEMANTICMEMORY"][0]["text"]
-        else:
-            params = {
-                "version": "1.0",
-                "agreement_id": "AG123456",
-                "privacy_policy": "https://example.com/privacy",
-                "terms_of_service": "https://example.com/terms",
-                "format": "json",
-                "schema_version": "1.1",
-                "checksum": "a1b2c3d4e5f6",
-                "owner": "John Doe",
-                "license": "MIT",
-                "validity_start": "2023-08-01",
-                "validity_end": "2024-07-31",
-            }
-            loader_settings =  {
-            "format": "PDF",
-            "source": "url",
-            "path": "https://www.ibiblio.org/ebooks/London/Call%20of%20Wild.pdf"
-            }
-            load_jack_london = await memory._add_semantic_memory(observation = query, loader_settings=loader_settings, params=params)
-            memory_loaded = await memory._fetch_semantic_memory(observation=query, params=None)
-            return memory_loaded["data"]["Get"]["SEMANTICMEMORY"][0]["text"]
+        params = {
+            "version": "1.0",
+            "agreement_id": "AG123456",
+            "privacy_policy": "https://example.com/privacy",
+            "terms_of_service": "https://example.com/terms",
+            "format": "json",
+            "schema_version": "1.1",
+            "checksum": "a1b2c3d4e5f6",
+            "owner": "John Doe",
+            "license": "MIT",
+            "validity_start": "2023-08-01",
+            "validity_end": "2024-07-31",
+        }
+        loader_settings =  {
+        "format": "PDF",
+        "source": "url",
+        "path": "https://www.ibiblio.org/ebooks/London/Call%20of%20Wild.pdf"
+        }
+        load_jack_london = await memory._add_semantic_memory(observation = query, loader_settings=loader_settings, params=params)
+        memory_loaded = await memory._fetch_semantic_memory(observation=query, params=None)
+        return memory_loaded["data"]["Get"]["SEMANTICMEMORY"][0]["text"]
 
-        # return load_jack_london
-        #
-        # modulator = {"relevance": 0.0, "saliency": 0.0, "frequency": 0.0}
-        # # #
-        # run_main_buffer = await memory._create_buffer_context(
-        #     user_input="I want to know how does Buck adapt to life in the wild and then have that info translated to german ",
-        #     params=params,
-        #     attention_modulators=modulator,
-        # )
+            # return load_jack_london
+            #
+            # modulator = {"relevance": 0.0, "saliency": 0.0, "frequency": 0.0}
+            # # #
+            # run_main_buffer = await memory._create_buffer_context(
+            #     user_input="I want to know how does Buck adapt to life in the wild and then have that info translated to german ",
+            #     params=params,
+            #     attention_modulators=modulator,
+            # )
+
 
     async def generate_chatgpt_output(query:str, context:str=None):
         if context is None:
             context = await generate_context(query=query)
             # print(context)
-        else:
-            pass
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[

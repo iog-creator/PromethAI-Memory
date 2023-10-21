@@ -73,7 +73,7 @@ class WeaviateVectorDB(VectorDB):
             auth_client_secret=auth_config,
             additional_headers={"X-OpenAI-Api-Key": os.environ.get("OPENAI_API_KEY")},
         )
-        retriever = WeaviateHybridSearchRetriever(
+        return WeaviateHybridSearchRetriever(
             client=client,
             index_name=namespace,
             text_key="text",
@@ -81,19 +81,19 @@ class WeaviateVectorDB(VectorDB):
             embedding=embeddings,
             create_schema_if_missing=True,
         )
-        return retriever  # If this is part of the initialization, call it here.
 
     def init_weaviate_client(self, namespace: str):
         # Weaviate client initialization logic
         auth_config = weaviate.auth.AuthApiKey(
             api_key=os.environ.get("WEAVIATE_API_KEY")
         )
-        client = weaviate.Client(
+        return weaviate.Client(
             url=os.environ.get("WEAVIATE_URL"),
             auth_client_secret=auth_config,
-            additional_headers={"X-OpenAI-Api-Key": os.environ.get("OPENAI_API_KEY")},
+            additional_headers={
+                "X-OpenAI-Api-Key": os.environ.get("OPENAI_API_KEY")
+            },
         )
-        return client
 
     def _stuct(self, observation, params, metadata_schema_class =None):
         """Utility function to create the document structure with optional custom fields."""

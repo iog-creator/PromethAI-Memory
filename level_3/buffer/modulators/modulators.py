@@ -97,11 +97,10 @@ class DifferentiableLayer:
         document_context_result = self.llm_base(_input.to_string())
         document_context_result_parsed = parser.parse(document_context_result)
         document_context_result_parsed = json.loads(document_context_result_parsed.json())
-        document_summary = document_context_result_parsed["summaries"][0]["summary"]
-
-        return document_summary
+        return document_context_result_parsed["summaries"][0]["summary"]
 
     async def memory_route(self, text_time_diff: str):
+
         @ai_classifier
         class MemoryRoute(Enum):
             """Represents classifer for freshness of memories"""
@@ -113,9 +112,7 @@ class DifferentiableLayer:
             data_uploaded_more_than_three_months_ago = "0.3"
             data_uploaded_more_than_six_months_ago = "0.1"
 
-        namespace = MemoryRoute(str(text_time_diff))
-
-        return namespace
+        return MemoryRoute(text_time_diff)
 
     async def freshness(self, observation: str, namespace: str = None, memory=None) -> list[str]:
         """Freshness - Score between 0 and 1  on how often was the information updated in episodic or semantic memory in the past"""
@@ -179,7 +176,9 @@ class DifferentiableLayer:
         # Calculate intervals between consecutive accesses
         intervals = [access_times[i + 1] - access_times[i] for i in range(len(access_times) - 1)]
         # A simple scoring mechanism: Longer intervals get higher scores, as they indicate spaced repetition
-        repetition_score = sum([1.0 / (interval + 1) for interval in intervals]) / len(intervals)
+        repetition_score = sum(
+            1.0 / (interval + 1) for interval in intervals
+        ) / len(intervals)
         summary = await self._summarizer(text = observation, document=result_output["data"]["Get"]["EPISODICMEMORY"][0])
         logging.info("Repetition is %s", str(repetition_score))
         logging.info("Repetition summary is %s", str(summary))

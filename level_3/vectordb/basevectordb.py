@@ -118,9 +118,7 @@ class BaseMemory:
         """Create a dynamic schema based on provided parameters."""
 
         dynamic_fields = {field_name: fields.Str() for field_name in params.keys()}
-        # Create a Schema instance with the dynamic fields
-        dynamic_schema_instance = Schema.from_dict(dynamic_fields)()
-        return dynamic_schema_instance
+        return Schema.from_dict(dynamic_fields)()
 
 
     async def get_version_from_db(self, user_id, memory_id):
@@ -129,16 +127,12 @@ class BaseMemory:
         Session = sessionmaker(bind=engine)
         session = Session()
         try:
-            # Querying both fields: contract_metadata and created_at
-            result = (
+            if result := (
                 session.query(MetaDatas.contract_metadata, MetaDatas.created_at)
                 .filter_by(user_id=user_id)  # using parameter, not self.user_id
                 .order_by(MetaDatas.created_at.desc())
                 .first()
-            )
-
-            if result:
-
+            ):
                 version_in_db, created_at = result
                 logging.info(f"version_in_db: {version_in_db}")
                 from ast import literal_eval
@@ -161,15 +155,10 @@ class BaseMemory:
 
             session.add(MetaDatas(id = str(uuid.uuid4()), user_id=self.user_id, version = str(int(time.time())) ,memory_id=self.memory_id, contract_metadata=params))
             session.commit()
-            return params
-
-        # If params version is higher, update the metadata.
         elif version_in_params > version_from_db[0]:
             session.add(MetaDatas(id = str(uuid.uuid4()), user_id=self.user_id, memory_id=self.memory_id, contract_metadata=params))
             session.commit()
-            return params
-        else:
-            return params
+        return params
 
 
     async def add_memories(
@@ -211,7 +200,7 @@ class BaseMemory:
 
         # Schema Validation
         schema_instance = schema_instance
-        print("Schema fields: ", [field for field in schema_instance._declared_fields])
+        print("Schema fields: ", list(schema_instance._declared_fields))
         loaded_params = schema_instance.load(params)
 
         return await self.vector_db.add_memories(

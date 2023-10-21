@@ -59,8 +59,6 @@ async def main_buffer(
 
         complete_agent_prompt = f" Document context is: {document_from_vectorstore} \n  Task is : {task['task_order']} {task['task_name']} {task['operation']} "
 
-        # task['vector_store_context_results']=document_context_result_parsed.dict()
-
         class FetchText(BaseModel):
             observation: str = Field(description="observation we want to translate")
 
@@ -69,9 +67,8 @@ async def main_buffer(
             """Fetch from vectorstore if data doesn't exist in the context"""
             if document_context_result_parsed:
                 return document_context_result_parsed
-            else:
-                out = self.fetch_memories(observation['original_query'], namespace="SEMANTICMEMORY")
-                return out
+            out = self.fetch_memories(observation['original_query'], namespace="SEMANTICMEMORY")
+            return out
 
         class TranslateText(BaseModel):
             observation: str = Field(description="observation we want to translate")
@@ -96,7 +93,6 @@ async def main_buffer(
         result_tasks.append(task)
         result_tasks.append(output)
 
-    # buffer_result = await self.fetch_memories(observation=str(user_input))
     class EpisodicTask(BaseModel):
         """Schema for an individual task."""
 
@@ -139,8 +135,8 @@ async def main_buffer(
         query=user_input, steps=str(tasks_list)
         , buffer=str(result_tasks), date=date, attention_modulators=attention_modulators
     )
-    print("HERE ARE THE STEPS, BUFFER AND DATE", str(tasks_list))
-    print("here are the result_tasks", str(result_tasks))
+    print("HERE ARE THE STEPS, BUFFER AND DATE", tasks_list)
+    print("here are the result_tasks", result_tasks)
     # return "a few things to do like load episodic memory in a structured format"
     output = self.llm_base(_input.to_string())
     result_parsing = parser.parse(output)

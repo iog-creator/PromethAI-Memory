@@ -46,12 +46,11 @@ if os.path.exists(env_file):
 
 
 else:
-    secrets = fetch_secret(
+    if secrets := fetch_secret(
         f"promethai-{environment}-backend-secretso-promethaijs-dotenv",
         "eu-west-1",
         ".env",
-    )
-    if secrets:
+    ):
         print(secrets)
     load_dotenv()
 
@@ -60,7 +59,7 @@ else:
 if "dev" in environment:
     # Fetch the secret
     secrets = fetch_secret(
-        f"promethai-dev-backend-secretso-promethaijs-dotenv",
+        "promethai-dev-backend-secretso-promethaijs-dotenv",
         "eu-west-1",
         ".env",
     )
@@ -68,7 +67,7 @@ if "dev" in environment:
 elif "prd" in environment:
     # Fetch the secret
     secrets = fetch_secret(
-        f"promethai-prd-backend-secretso-promethaijs-dotenv",
+        "promethai-prd-backend-secretso-promethaijs-dotenv",
         "eu-west-1",
         ".env",
     )

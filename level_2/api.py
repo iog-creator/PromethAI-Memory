@@ -235,14 +235,11 @@ async def provide_feedback(
             output = await Memory_._provide_feedback(
                 user_input=decoded_payload["prompt"], params=decoded_payload["params"], attention_modulators=None, total_score=decoded_payload["total_score"]
             )
-            return JSONResponse(content={"response": output}, status_code=200)
         else:
             output = await Memory_._provide_feedback(
                 user_input=decoded_payload["prompt"], params=decoded_payload["params"], attention_modulators=decoded_payload["attention_modulators"], total_score=None
             )
-            return JSONResponse(content={"response": output}, status_code=200)
-
-
+        return JSONResponse(content={"response": output}, status_code=200)
     except Exception as e:
         return JSONResponse(content={"response": {"error": str(e)}}, status_code=503)
 def start_api_server(host: str = "0.0.0.0", port: int = 8000):

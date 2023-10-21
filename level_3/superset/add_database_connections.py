@@ -10,9 +10,11 @@ def add_database_connections():
             database_name = db_conn['database_name']
             sqlalchemy_uri = db_conn['sqlalchemy_uri']
 
-            # Check if database already exists
-            existing_db = db.session.query(Database).filter_by(database_name=database_name).first()
-            if existing_db:
+            if (
+                existing_db := db.session.query(Database)
+                .filter_by(database_name=database_name)
+                .first()
+            ):
                 print(f"Database {database_name} already exists, skipping")
                 continue
 
